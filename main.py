@@ -44,7 +44,7 @@ controls = dbc.Card(
                         dbc.CardGroup(  # Change from dbc.FormGroup to dbc.CardGroup
                             [
                                 dbc.Label("Select Stock", style={
-                                          "text-align": "center"}),
+                                          "text-align": "center", }),
 
                                 dcc.Dropdown(
                                     id="my-dropdown",
@@ -59,7 +59,7 @@ controls = dbc.Card(
                                         {'label': 'AT&T Inc.', 'value': 'T'}
                                     ],
                                     value='GOOGL',
-                                    style={'border-radius': '5px', 'border': '1px solid #ced4da', 'padding': '0.375rem 0.75rem',
+                                    style={'border-radius': '5px', 'border': '1px solid #ced4da',
                                            'font-size': '1rem', 'line-height': '1.5', 'width': '100%'}  # Inline CSS
                                 ),
                                 html.Br(),
@@ -71,24 +71,14 @@ controls = dbc.Card(
         ),
     ],
     className="mb-3",
-    style={'width': '50%', 'background-color': '#E5BAFF'}
+    style={'width': '50%', 'background-color': '#E5BAFF', "margin-top": "2%"}
 )
 
 app.layout = dbc.Container(
     [
-        html.H1("Stock Recommendation System", style={'background-color': '#3B005F', 'color': '#FFFFFF',
+        html.H1("Stock Recommendation System", style={'background-color': '#6A00AA', 'color': '#FFFFFF',
                 'textAlign': 'center', 'padding': '1%', 'margin': '0px'}),
-        html.Hr(),
 
-        dbc.Alert(
-            [
-                html.H4("Stock Predictions Using Machine Learning!",
-                        className="alert-heading", style={"color": "white"}),
-            ],
-            color="#3B005F",
-            style={"textAlign": "center",
-                   "width": "max-content", "margin": "auto", "margin-bottom": "1%"},
-        ),
 
         dbc.Row(
             [
@@ -97,6 +87,8 @@ app.layout = dbc.Container(
                 dbc.Row(dcc.Graph(id="my-graph")),
             ],
             justify="center",
+            style={"width": "70%", "margin": "auto"}
+
         ),
 
         html.Div(
@@ -193,7 +185,7 @@ def get_data(selected_dropdown_value):
 
         }
         ],
-        'layout': {'margin': {'l': 60, 'r': 60, 't': 30, 'b': 30}, 'title': 'Stock Data Visualization', 'align': 'center'}
+        'layout': {'margin': {'l': 60, 'r': 60, 't': 60, 'b': 60}, 'title': 'Stock Data Visualization', 'align': 'center'}
     }
 
 
