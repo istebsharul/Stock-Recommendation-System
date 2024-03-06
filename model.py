@@ -215,10 +215,10 @@ def make_predictions(df):
 
 def retrieving_tweets_polarity(symbol):
     # AAAAAAAAAAAAAAAAAAAAAOWtsgEAAAAAhikf7yKsz2eSVGkk2JWRk4M%2BJIc%3DyReSAYMSQOmiEaHDobQHoU74r1jwpQ47G7X7Asf2yrKsPDEnke
-    consumer_key = '2hfMDvp7D4u7fySofUGU9FLST'
-    consumer_secret = '64ZhEHPsU8N22QGRTIru3u9gDB8bgkxUNmldKkYcOuE6d7s16H'
-    access_token = '845189065808891904-ZEcKfkoEZJP67N7JXoI3nv3nuxhfgvg'
-    access_token_secret = 'WECh5CEDx3BOL1nqffaSIj8tZt1ry6YThVSGXtr4kjxtf'
+    consumer_key = ''
+    consumer_secret = ''
+    access_token = ''
+    access_token_secret = ''
 
     auth = tweepy.OAuthHandler(consumer_key, consumer_secret)
     auth.set_access_token(access_token, access_token_secret)
