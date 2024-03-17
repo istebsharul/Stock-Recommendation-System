@@ -183,7 +183,15 @@ def get_data(selected_dropdown_value):
             'name': 'Bayesian',
 
 
+        }, 
+            {
+            'x': dff.index,
+            'y': dff['forecast_lstm'],
+            'name': 'LSTM',
+
+
         }
+
         ],
         'layout': {'margin': {'l': 60, 'r': 60, 't': 60, 'b': 60}, 'title': 'Stock Data Visualization', 'align': 'center'}
     }
