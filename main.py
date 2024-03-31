@@ -190,6 +190,35 @@ def get_data(selected_dropdown_value):
             'name': 'LSTM',
 
 
+        }, 
+            {
+            'x': dff.index,
+            'y': dff['forecast_gru'],
+            'name': 'GRU',
+
+
+        },
+           {
+            'x': dff.index,
+            'y': dff['Forecast_tcn'],
+            'name': 'TCN',
+
+
+        }, 
+           {
+            'x': dff.index,
+            'y': dff['Forecast_mlp'],
+            'name': 'MLP',
+
+
+        },
+
+            {
+            'x': dff.index,
+            'y': dff['Forecast_gbm'],
+            'name': 'GBM',
+
+
         }
 
         ],

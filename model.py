@@ -1,24 +1,22 @@
-from sklearn.discriminant_analysis import StandardScaler
-from sklearn.preprocessing import StandardScaler, MinMaxScaler
 import tweepy
 import math
 import nltk
 import numpy as np
-from pandas import Series, DataFrame
 from pandas.plotting import scatter_matrix
 from sklearn import preprocessing
 from sklearn.linear_model import LinearRegression, BayesianRidge
 from sklearn.neighbors import KNeighborsRegressor
-from sklearn.preprocessing import PolynomialFeatures
 from sklearn.pipeline import make_pipeline
 from sklearn.model_selection import train_test_split
 from datetime import datetime
 from datetime import timedelta
 from textblob import TextBlob
 from keras.models import Sequential
-from keras.layers import LSTM, Dense
-from sklearn.preprocessing import MinMaxScaler
-import time
+from keras.layers import LSTM,GRU, Dense, Dropout
+from keras.models import load_model
+from keras.optimizers import Adam
+from sklearn.ensemble import GradientBoostingRegressor
+from tcn import TCN, tcn_full_summary
 
 nltk.download('punkt')
 
@@ -37,6 +35,8 @@ def moving_avg(df):
     df['rets'] = df['Close'] / df['Close'].shift(1) - 1
 
     return df
+
+
 
 def make_predictions(df):
 
@@ -61,10 +61,11 @@ def make_predictions(df):
     y = np.array(df['label'])
     y = y[:-forecast_out]
 
+
     # Split data
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=0.2, random_state=0)
-
+    
     # Linear regression
     model = LinearRegression(n_jobs=-1)
     model.fit(X_train, y_train)
@@ -84,25 +85,86 @@ def make_predictions(df):
     model_lstm.add(Dense(units=1))
     model_lstm.compile(optimizer='adam', loss='mean_squared_error')
 
+
+    # GRU regression
+    model_gru = Sequential()
+    model_gru.add(GRU(units=50, activation='relu', input_shape=(X_train.shape[1], 1)))
+    model_gru.add(Dense(units=1))
+    model_gru.compile(optimizer='adam', loss='mean_squared_error')
+
+    # MLP regression
+    model_mlp = Sequential()
+    model_mlp.add(Dense(units=64, activation='relu',input_dim=X_train.shape[1]))
+    model_mlp.add(Dropout(0.2))
+    model_mlp.add(Dense(units=1))
+    model_mlp.compile(optimizer='adam', loss='mean_squared_error')
+
     # Reshape X_train and X_test for LSTM
     X_train_lstm = np.reshape(X_train, (X_train.shape[0], X_train.shape[1], 1))
     X_test_lstm = np.reshape(X_test, (X_test.shape[0], X_test.shape[1], 1))
 
-    model_lstm.fit(X_train_lstm, y_train, epochs=10, batch_size=32)
+    model_lstm.fit(X_train_lstm, y_train, epochs=20, batch_size=32)
+
+
+    # Reshape X_train and X_test for GRU
+    X_train_gru = np.reshape(X_train, (X_train.shape[0], X_train.shape[1], 1))
+    X_test_gru = np.reshape(X_test, (X_test.shape[0], X_test.shape[1], 1))
+
+    model_gru.fit(X_train_gru, y_train, epochs=20, batch_size=32)
+
+
+    # TCN model
+    model_tcn = Sequential([
+        TCN(input_shape=(X_train.shape[1], 1), return_sequences=False),
+        Dense(1)
+    ])
+    model_tcn.compile(optimizer='adam', loss='mean_squared_error')
+
+    # Train TCN model
+    model_tcn.fit(X_train, y_train, epochs=20, batch_size=32)
+
+    # Train MLP model
+    model_mlp.fit(X_train, y_train, epochs=50, batch_size=32)
+
+
+    # GBM Regression
+    model_gbm = GradientBoostingRegressor()
+    model_gbm.fit(X_train, y_train)
+
 
     # Create confindence scores
     confidencereg = model.score(X_test, y_test)
     confidence_model_knn = model_knn.score(X_test, y_test)
     confidence_model_by = model_by.score(X_test, y_test)
+
+    
     # LSTM requires a different approach to obtain confidence
     confidence_model_lstm = model_lstm.evaluate(X_test_lstm, y_test)
+
+    # GRU requires a different approach to obtain confidence
+    confidence_model_gru = model_gru.evaluate(X_test_gru, y_test)
+
+    # Evaluate TCN model on test data
+    confidence_tcn = model_tcn.evaluate(X_test, y_test)
+
+    # Evaluate MLP model on test data
+
+    confidence_model_mlp = model_mlp.evaluate(X_test, y_test)
+
+    # Calculate confidence score
+    confidence_model_gbm = model_gbm.score(X_test, y_test)
+
 
     reg = confidencereg * 100
     knn = confidence_model_knn * 100
     by = confidence_model_by * 100
     lstm = (1 - confidence_model_lstm) * 100  # LSTM returns loss, so use (1 - loss) as confidence
+    gru = (1 - confidence_model_gru) * 100
+    tcn = confidence_tcn * 100
+    mlp = (1 - confidence_model_mlp) * 100
+    gbm = confidence_model_gbm * 100
 
-    score = "Regression {}\nKNN {}\nBayesian {}\nLSTM {}\n".format(reg, knn, by, lstm)
+    score = "Regression {}\nKNN {}\nBayesian {}\nLSTM {}\nGRU {}\nMLP {}\nTCN {}\nGBM {}\n".format(reg, knn, by, lstm,gru,mlp,tcn,gbm)
     # Create new columns
     forecast_reg = model.predict(X_forecast)
     forecast_knn = model_knn.predict(X_forecast)
@@ -111,6 +173,22 @@ def make_predictions(df):
     # Reshape X_forecast for LSTM
     X_forecast_lstm = np.reshape(X_forecast, (X_forecast.shape[0], X_forecast.shape[1], 1))
     forecast_lstm = model_lstm.predict(X_forecast_lstm)
+
+
+    # Reshape X_forecast for GRU
+    X_forecast_gru = np.reshape(X_forecast, (X_forecast.shape[0], X_forecast.shape[1], 1))
+    forecast_gru = model_gru.predict(X_forecast_gru)
+
+    # Reshape X_forecast for MLP
+    forecast_mlp = model_mlp.predict(X_forecast)
+
+    # Make forecasts with TCN
+    forecast_tcn = model_tcn.predict(X_forecast)
+
+    # Reshape X_forecast for GBM
+    X_forecast_gbm = X_forecast  # No need to reshape for GBM
+
+
 
     # Process all new columns data
     df['Forecast_reg'] = np.nan
@@ -124,6 +202,46 @@ def make_predictions(df):
         next_unix += timedelta(days=1)
         df.loc[next_date] = [np.nan for _ in range(len(df.columns))]
         df['Forecast_reg'].loc[next_date] = i
+
+    # Process forecasts
+    df['Forecast_tcn'] = np.nan
+    last_date = df.iloc[-26].name
+    next_unix = last_date + timedelta(days=1)
+
+    for i in forecast_tcn:
+        next_date = next_unix
+        next_unix += timedelta(days=1)
+        # df.loc[next_date] = [np.nan for _ in range(len(df.columns))]
+        df['Forecast_tcn'].loc[next_date] = i
+
+
+    # Process forecasts
+    df['Forecast_mlp'] = np.nan
+    last_date = df.iloc[-26].name
+    next_unix = last_date + timedelta(days=1)
+
+    for i in forecast_mlp:
+        next_date = next_unix
+        next_unix += timedelta(days=1)
+        # df.loc[next_date] = [np.nan for _ in range(len(df.columns))]
+        df['Forecast_mlp'].loc[next_date] = i
+
+        
+    # Create new column
+    df['Forecast_gbm'] = np.nan
+
+    # Make forecasts
+    forecast_gbm = model_gbm.predict(X_forecast_gbm)
+
+    # Process forecasts
+    last_date = df.iloc[-26].name
+    next_unix = last_date + timedelta(days=1)
+
+    for i in forecast_gbm:
+        next_date = next_unix
+        next_unix += timedelta(days=1)
+        # df.loc[next_date] = [np.nan for _ in range(len(df.columns))]
+        df['Forecast_gbm'].loc[next_date] = i
 
     df['Forecast_knn'] = np.nan
 
@@ -158,7 +276,18 @@ def make_predictions(df):
         next_unix += timedelta(days=1)
         df['forecast_lstm'].loc[next_date] = i
 
+    df['forecast_gru'] = np.nan
 
+    last_date = df.iloc[-26].name
+    last_unix = last_date
+    next_unix = last_unix + timedelta(days=1)
+
+    for i in forecast_gru:
+        next_date = next_unix
+        next_unix += timedelta(days=1)
+        df['forecast_gru'].loc[next_date] = i
+
+        
 
     return df
 
